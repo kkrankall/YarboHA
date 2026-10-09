@@ -187,7 +187,7 @@ Setting a device to **standby** via the Working State select excludes it from wa
 | Requirement | Detail |
 |-------------|--------|
 | Home Assistant | 2024.1 or later |
-| SDK | `yarbo-data-sdk >= 0.2.0` (installed automatically) |
+| SDK | `yarbo-data-sdk >= 0.3.0` (installed automatically) |
 | Account | Active Yarbo account |
 | Network | Internet connection required at all times |
 
@@ -195,4 +195,5 @@ Setting a device to **standby** via the Working State select excludes it from wa
 
 ## License
 
-MIT
+PolyForm Noncommercial 1.0.0. Use is limited to the purposes permitted by the
+[license](LICENSE); it does not grant general commercial use rights.
