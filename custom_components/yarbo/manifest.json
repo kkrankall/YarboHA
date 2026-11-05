@@ -3,7 +3,7 @@
   "name": "Yarbo",
   "codeowners": ["@nicebay"],
   "config_flow": true,
-  "dependencies": ["websocket_api"],
+  "dependencies": ["frontend", "http", "websocket_api"],
   "documentation": "https://github.com/YarboInc/YarboHA",
   "iot_class": "cloud_push",
   "requirements": ["yarbo-data-sdk>=0.3.0"],

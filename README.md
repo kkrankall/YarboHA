@@ -115,6 +115,33 @@ above, or after a manual **Refresh Map Data**.
 
 ---
 
+## Live Feed (Smart Vision)
+
+> ⚠️ **Experimental, not yet confirmed against a real robot.** The request and response
+> fields for the video service are not all known yet, so the card may report an error
+> naming what the service returned.
+
+The integration loads a dashboard card that plays the robot's cameras:
+
+```yaml
+type: custom:yarbo-smart-vision-card
+sn: <robot serial number>
+max_minutes: 5   # optional, stops the feed automatically
+mode: live       # optional, Agora channel mode: live or rtc
+```
+
+- **The feed is not a `camera` entity.** Smart Vision streams through Agora and the browser
+  joins the channel directly, so it can't be used for snapshots, recording, or automations.
+- **It only runs when you ask.** It starts when you press **Start**, and stops when you press
+  **Stop**, leave the page or hide the tab, or reach `max_minutes`. Smart Vision uses the
+  robot's battery, and its monthly allowance on 4G.
+- **It's admin-only**, because the card receives credentials for the robot's video channel.
+- **It needs internet access.** The card loads a pinned copy of the Agora Web SDK from
+  jsDelivr, and video travels through Agora's cloud.
+- **Video only.** There is no audio or voice intercom.
+
+---
+
 ## Precondition Checks
 
 ### Start Plan
@@ -186,7 +213,7 @@ Setting a device to **standby** via the Working State select excludes it from wa
 
 | Requirement | Detail |
 |-------------|--------|
-| Home Assistant | 2024.1 or later |
+| Home Assistant | 2024.7 or later |
 | SDK | `yarbo-data-sdk >= 0.3.0` (installed automatically) |
 | Account | Active Yarbo account |
 | Network | Internet connection required at all times |

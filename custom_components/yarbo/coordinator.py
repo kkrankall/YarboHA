@@ -34,6 +34,11 @@ from .const import (
     KEEP_AWAKE_DOCKED,
     KEEP_AWAKE_OFF,
 )
+from .smart_vision import (
+    SmartVisionError,
+    SmartVisionTokenExpired,
+    async_fetch_credentials,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -785,6 +790,32 @@ class YarboDataUpdateCoordinator(DataUpdateCoordinator[dict[str, dict]]):
         await self._async_fetch_map_data(sn, type_id)
         if self.data is not None:
             self.async_set_updated_data(self.data)
+
+    async def async_get_smart_vision_credentials(self, sn: str) -> dict[str, Any]:
+        """Fetch Agora credentials for a device's live feed.
+
+        The video route is outside the SDK, so an expired session is renewed
+        through an SDK call (which refreshes on 401) and retried once.
+        """
+        if self._client is None:
+            raise SmartVisionError("The Yarbo integration is not connected.")
+        try:
+            return await async_fetch_credentials(self.hass, self._client.token, sn)
+        except SmartVisionTokenExpired:
+            pass
+
+        try:
+            await self.hass.async_add_executor_job(self._client.get_devices)
+        except YarboSDKError as err:
+            raise SmartVisionError(f"Could not renew the Yarbo session: {err}") from err
+        self._update_stored_tokens()
+
+        try:
+            return await async_fetch_credentials(self.hass, self._client.token, sn)
+        except SmartVisionTokenExpired as err:
+            raise SmartVisionError(
+                "The Yarbo video service rejected this integration's login."
+            ) from err
 
     # ---- Internal ----
 

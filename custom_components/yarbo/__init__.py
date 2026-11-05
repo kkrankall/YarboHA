@@ -9,6 +9,7 @@ from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN, PLATFORMS
 from .coordinator import YarboDataUpdateCoordinator
+from .smart_vision import async_register_card
 from .websocket_api import async_register as async_register_websockets
 
 _LOGGER = logging.getLogger(__name__)
@@ -25,6 +26,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Register the on-demand map (GeoJSON) WebSocket command once. Kept out of
     # entity attributes to stay under the recorder's 16 KB limit.
     async_register_websockets(hass)
+    await async_register_card(hass)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
