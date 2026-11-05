@@ -220,7 +220,9 @@ function mapSvg(geojson, robot) {
 
   const byType = (type) => features.filter((f) => f.properties && f.properties.zone_type === type);
   let shapes = "";
-  let labels = "";
+  const names = [];
+  // Markers that zone names keep clear of: [x, y, radius].
+  const markers = [];
   for (const type of POLYGON_ORDER) {
     for (const f of byType(type)) {
       if (!f.geometry || f.geometry.type !== "Polygon") continue;
@@ -232,7 +234,7 @@ function mapSvg(geojson, robot) {
           ring.reduce((s, c) => s + c[0], 0) / ring.length,
           ring.reduce((s, c) => s + c[1], 0) / ring.length,
         ]);
-        labels += `<text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}">${esc(name)}</text>`;
+        names.push([cx, cy, String(name)]);
       }
     }
   }
@@ -245,14 +247,23 @@ function mapSvg(geojson, robot) {
   for (const f of byType("charging")) {
     if (!f.geometry || f.geometry.type !== "Point") continue;
     const [x, y] = pt(f.geometry.coordinates);
+    markers.push([x, y, 10]);
     shapes += `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)})"><circle class="dock" r="8"/>
       <path class="dock-bolt" d="M1 -5 L-3 1 H0 L-1 5 L3 -1 H0 Z"/></g>`;
   }
+  let robotMark = "";
   if (robot) {
     const [x, y] = pt(robot);
-    shapes += `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)})">
+    markers.push([x, y, 14]);
+    robotMark = `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)})">
       <circle class="robot-pulse" r="12"/><circle class="robot-dot" r="6"/></g>`;
   }
+  const labels = names
+    .map(([x, y, name]) => {
+      const ly = labelY(x, y, name, markers);
+      return `<text x="${x.toFixed(1)}" y="${ly.toFixed(1)}">${esc(name)}</text>`;
+    })
+    .join("");
   return `
     <svg viewBox="0 0 ${MAP_W} ${MAP_H}" role="img" aria-label="Work-zone map">
       <defs>
@@ -261,8 +272,22 @@ function mapSvg(geojson, robot) {
         </pattern>
       </defs>
       <rect width="${MAP_W}" height="${MAP_H}" fill="url(#yc-grid)"/>
-      ${shapes}${labels}
+      ${shapes}${labels}${robotMark}
     </svg>`;
+}
+
+// Moves a zone name up or down until it clears the dock and the robot.
+function labelY(x, y, name, markers) {
+  const halfW = name.length * 3.2 + 3;
+  const halfH = 7;
+  const clear = (ly) =>
+    ly - halfH >= 0 &&
+    ly + halfH <= MAP_H &&
+    markers.every(([mx, my, r]) => Math.abs(x - mx) >= halfW + r || Math.abs(ly - my) >= halfH + r);
+  for (const dy of [0, -16, 16, -26, 26, -36, 36]) {
+    if (clear(y + dy)) return y + dy;
+  }
+  return y;
 }
 
 // ---- Card ---------------------------------------------------------------------
@@ -514,6 +539,8 @@ const STYLE = `
     position: absolute; right: 16px; pointer-events: none; color: var(--yc-text-2);
     --mdc-icon-size: 20px;
   }
+  .plan.disabled { opacity: 0.38; }
+  .plan.disabled select { cursor: not-allowed; }
   .stop {
     width: 100%; height: 56px; display: flex; align-items: center; justify-content: center; gap: 8px;
     border: 0; border-radius: 999px; cursor: pointer; font-weight: 600; --mdc-icon-size: 20px;
@@ -1069,8 +1096,9 @@ class YarboCard extends HTMLElement {
         .map((p) => `<option value="${esc(p)}"${p === m.plan ? " selected" : ""}>${esc(p)}</option>`)
         .join("");
       const prompt = m.plans.length ? "Choose a plan" : "No plans";
-      middle = `<label class="plan">
-        <select data-action="plan" aria-label="Plan" ${m.plans.length && this._usable("plan") ? "" : "disabled"}>
+      const planOk = m.online && m.plans.length && this._usable("plan");
+      middle = `<label class="plan${planOk ? "" : " disabled"}">
+        <select data-action="plan" aria-label="Plan" ${planOk ? "" : "disabled"}>
           ${m.plan ? "" : `<option value="" selected disabled>${prompt}</option>`}${options}
         </select>${icon("mdi:chevron-down")}</label>`;
       middleCap = "Plan";
