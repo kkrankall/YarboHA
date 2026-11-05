@@ -15,12 +15,9 @@ real response shows what needs correcting here.
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 from aiohttp import ClientError, ClientTimeout
-from homeassistant.components.frontend import add_extra_js_url
-from homeassistant.components.http import StaticPathConfig
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
@@ -43,11 +40,6 @@ FIELD_ALIASES: dict[str, tuple[str, ...]] = {
     "expire_at": ("expireAt",),
 }
 REQUIRED_FIELDS = ("app_id", "token", "channel")
-
-CARD_FILE = Path(__file__).parent / "www" / "yarbo-smart-vision-card.js"
-CARD_URL = "/yarbo_static/yarbo-smart-vision-card.js"
-CARD_VERSION = "1"
-_CARD_REGISTERED_KEY = "yarbo_smart_vision_card_registered"
 
 
 class SmartVisionError(Exception):
@@ -113,14 +105,3 @@ async def async_fetch_credentials(
     except (ClientError, TimeoutError, ValueError) as err:
         raise SmartVisionError(f"Could not reach the Yarbo video service: {err}") from err
     return parse_credentials(body)
-
-
-async def async_register_card(hass: HomeAssistant) -> None:
-    """Serve the dashboard card and load it in the frontend, once per instance."""
-    if hass.data.get(_CARD_REGISTERED_KEY):
-        return
-    await hass.http.async_register_static_paths(
-        [StaticPathConfig(CARD_URL, str(CARD_FILE), cache_headers=False)]
-    )
-    add_extra_js_url(hass, f"{CARD_URL}?v={CARD_VERSION}")
-    hass.data[_CARD_REGISTERED_KEY] = True

@@ -12,13 +12,10 @@ from yarbo_robot_sdk import YarboSDKError
 from custom_components.yarbo.const import DOMAIN
 from custom_components.yarbo.coordinator import YarboDataUpdateCoordinator
 from custom_components.yarbo.smart_vision import (
-    CARD_FILE,
-    CARD_URL,
     TOKEN_URL,
     SmartVisionError,
     SmartVisionTokenExpired,
     async_fetch_credentials,
-    async_register_card,
     parse_credentials,
 )
 from custom_components.yarbo.websocket_api import async_register
@@ -213,13 +210,3 @@ async def test_ws_requires_admin(hass, hass_ws_client, hass_admin_user, ws_coord
     assert response["error"]["code"] == "unauthorized"
     ws_coordinator.async_get_smart_vision_credentials.assert_not_called()
 
-
-async def test_card_is_registered_once(hass) -> None:
-    assert CARD_FILE.is_file()
-    hass.http = MagicMock(async_register_static_paths=AsyncMock())
-    with patch("custom_components.yarbo.smart_vision.add_extra_js_url") as add_js:
-        await async_register_card(hass)
-        await async_register_card(hass)
-    hass.http.async_register_static_paths.assert_awaited_once()
-    add_js.assert_called_once()
-    assert add_js.call_args.args[1].startswith(CARD_URL)

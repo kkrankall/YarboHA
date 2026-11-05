@@ -115,13 +115,41 @@ above, or after a manual **Refresh Map Data**.
 
 ---
 
+## Yarbo Card
+
+The integration adds a dashboard card laid out like the Yarbo app: the robot with its
+current head, its status, battery, network and RTK signal, and the plan controls.
+Add it from the card picker (search **Yarbo**) or in YAML:
+
+```yaml
+type: custom:yarbo-card
+device_id: <picked in the card editor>   # or sn: <robot serial number>
+name: Yard Master        # optional
+appearance: app          # app (dark, like the Yarbo app) or theme (follows your dashboard)
+show_map: true           # optional, adds a Map tab with your work zones
+show_live: true          # optional, adds a Live tab with Smart Vision (admins only)
+image: /local/yarbo.png  # optional, shows your own picture instead of the drawing
+```
+
+- **Start, Pause and Resume** use the integration's plan buttons, so their safety checks
+  still apply; if one fails, the card shows the reason. **End plan** needs a second tap.
+- **Recharge** sends the robot back to its dock. **Lights** and **Find robot** appear when
+  those entities are enabled.
+- Tapping the battery, network or RTK icons opens that entity's details.
+- The **Map** tab draws the zones from **Refresh Map Data**, and the robot's position once
+  it has an RTK fix.
+- The robot drawing is the card's own artwork, not Yarbo's product images.
+
+---
+
 ## Live Feed (Smart Vision)
 
 > ⚠️ **Experimental, not yet confirmed against a real robot.** The request and response
 > fields for the video service are not all known yet, so the card may report an error
 > naming what the service returned.
 
-The integration loads a dashboard card that plays the robot's cameras:
+The **Live** tab of the Yarbo card plays the robot's cameras. There is also a
+stand-alone card for it:
 
 ```yaml
 type: custom:yarbo-smart-vision-card

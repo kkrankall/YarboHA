@@ -91,6 +91,8 @@ class YarboSmartVisionCard extends HTMLElement {
   }
 
   _render() {
+    // embedded: true drops the card frame, for use inside the Yarbo card.
+    const frame = this._config.embedded ? "div" : "ha-card";
     this.shadowRoot.innerHTML = `
       <style>
         ha-card { display: block; padding: 16px; }
@@ -98,23 +100,27 @@ class YarboSmartVisionCard extends HTMLElement {
         .title { font-size: 1.2em; }
         .videos { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; }
         .videos:not(:empty) { margin-top: 12px; }
-        .tile { aspect-ratio: 16 / 9; background: #000; border-radius: 8px; overflow: hidden; }
+        .tile {
+          aspect-ratio: 16 / 9; background: #000; overflow: hidden;
+          border-radius: var(--yarbo-tile-radius, 8px);
+        }
         .status { margin-top: 12px; color: var(--secondary-text-color); }
         .status:empty { display: none; }
         button {
-          padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; font: inherit;
+          padding: 8px 16px; border: none; cursor: pointer; font: inherit;
+          border-radius: var(--yarbo-button-radius, 8px);
           background: var(--primary-color); color: var(--text-primary-color);
         }
         button:disabled { opacity: 0.5; cursor: default; }
       </style>
-      <ha-card>
+      <${frame}>
         <div class="header">
           <span class="title"></span>
           <button type="button">Start</button>
         </div>
         <div class="videos"></div>
         <div class="status" role="status"></div>
-      </ha-card>
+      </${frame}>
     `;
     this._button = this.shadowRoot.querySelector("button");
     this._videos = this.shadowRoot.querySelector(".videos");
