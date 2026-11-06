@@ -1,3 +1,5 @@
+<img src="custom_components/yarbo/brand/icon@2x.png" alt="" width="88" align="right">
+
 # Yarbo Home Assistant Integration
 
 > Home Assistant custom integration for Yarbo robot devices.  
@@ -119,6 +121,9 @@ above, or after a manual **Refresh Map Data**.
 
 The integration adds a dashboard card laid out like the Yarbo app: the robot with its
 current head, its status, battery, network and RTK signal, and the plan controls.
+
+![The Yarbo card while charging, working, on the Map tab, paused, stuck and offline](docs/images/yarbo-card-overview.webp)
+
 Add it from the card picker (search **Yarbo**) or in YAML:
 
 ```yaml
@@ -131,6 +136,14 @@ show_live: true          # optional, adds a Live tab with Smart Vision (admins o
 image: /local/yarbo.png  # optional, shows your own picture instead of the drawing
 ```
 
+`appearance: app` gives the card the Yarbo app's dark look. `appearance: theme` uses your
+dashboard's colors instead:
+
+<p>
+  <img src="docs/images/yarbo-card-app.webp" alt="The Yarbo card with appearance: app" width="48%">
+  <img src="docs/images/yarbo-card-theme.webp" alt="The Yarbo card with appearance: theme on a light dashboard" width="48%">
+</p>
+
 - **Start, Pause and Resume** use the integration's plan buttons, so their safety checks
   still apply; if one fails, the card shows the reason. **End plan** needs a second tap.
 - **Recharge** sends the robot back to its dock. **Lights** and **Find robot** appear when
@@ -138,7 +151,8 @@ image: /local/yarbo.png  # optional, shows your own picture instead of the drawi
 - Tapping the battery, network or RTK icons opens that entity's details.
 - The **Map** tab draws the zones from **Refresh Map Data**, and the robot's position once
   it has an RTK fix.
-- The robot drawing is the card's own artwork, not Yarbo's product images.
+- The robot drawing is the card's own artwork, not Yarbo's product images. The screenshots
+  use simulated robot data.
 
 ---
 
