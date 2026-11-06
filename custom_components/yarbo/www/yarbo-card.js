@@ -119,7 +119,7 @@ const PICTURE_DIR = new URL("images/", import.meta.url);
 const PICTURE_VERSION = new URL(import.meta.url).search;
 // Widths at 600 px high, so the card keeps its layout while a picture loads.
 const PICTURES = {
-  "y-core": 856, "y-snow": 808, "y-mower": 1008, "y-blower": 946,
+  "y-core": 856, "y-snow": 808, "y-mower": 1008, "y-blower": 919,
   "m-core": 823, "m-snow": 867, "m-mower": 918, "m-trim": 882, "m-collect": 961,
 };
 // These also come with the module's lights on, in the same framing.
