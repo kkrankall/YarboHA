@@ -133,7 +133,7 @@ name: Yard Master        # optional
 appearance: app          # app (dark, like the Yarbo app) or theme (follows your dashboard)
 show_map: true           # optional, adds a Map tab with your work zones
 show_live: true          # optional, adds a Live tab with Smart Vision (admins only)
-image: /local/yarbo.png  # optional, shows your own picture instead of the drawing
+image: /local/yarbo.png  # optional, shows your own picture instead of the card's
 ```
 
 `appearance: app` gives the card the Yarbo app's dark look. `appearance: theme` uses your
@@ -151,8 +151,12 @@ dashboard's colors instead:
 - Tapping the battery, network or RTK icons opens that entity's details.
 - The **Map** tab draws the zones from **Refresh Map Data**, and the robot's position once
   it has an RTK fix.
-- The robot drawing is the card's own artwork, not Yarbo's product images. The screenshots
-  use simulated robot data.
+- The robot picture shows the attached module: snow blower, mower or blower. The snow blower
+  and mower also show their lights when **Lights** is on. With the Smart Cover or no module
+  attached, it shows the bare core.
+- The pictures are the card's own 3D renders, not Yarbo's product photos, and the screenshots
+  use simulated robot data. The card also has pictures of the Yarbo M and its attachments, for
+  when Yarbo's SDK supports the M.
 
 ---
 

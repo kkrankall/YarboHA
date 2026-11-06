@@ -1,7 +1,8 @@
 """Serve the integration's dashboard cards and load them in the frontend.
 
 Each card is loaded with a fingerprint of its contents in the URL, so browsers
-pick up a new version after an update without a manual cache clear.
+pick up a new version after an update without a manual cache clear. The Yarbo
+card's robot pictures reuse its fingerprint, so they count toward it.
 """
 
 from __future__ import annotations
@@ -16,14 +17,19 @@ from homeassistant.core import HomeAssistant
 WWW_DIR = Path(__file__).parent / "www"
 STATIC_URL = "/yarbo_static"
 CARD_FILES = ("yarbo-smart-vision-card.js", "yarbo-card.js")
+PICTURES_DIR = WWW_DIR / "images"
 _REGISTERED_KEY = "yarbo_cards_registered"
 
 
 def _fingerprints() -> dict[str, str]:
-    return {
-        name: hashlib.sha256((WWW_DIR / name).read_bytes()).hexdigest()[:12]
-        for name in CARD_FILES
-    }
+    prints = {}
+    for name in CARD_FILES:
+        digest = hashlib.sha256((WWW_DIR / name).read_bytes())
+        if name == "yarbo-card.js":
+            for path in sorted(PICTURES_DIR.glob("*.webp")):
+                digest.update(path.read_bytes())
+        prints[name] = digest.hexdigest()[:12]
+    return prints
 
 
 async def async_register_cards(hass: HomeAssistant) -> None:

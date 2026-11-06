@@ -7,7 +7,7 @@
  *   appearance: app             # app (dark, like the Yarbo app) or theme
  *   show_map: true              # optional, the work-zone map tab
  *   show_live: true             # optional, the Smart Vision tab (admins only)
- *   image: /local/yarbo.png     # optional, replaces the drawing of the robot
+ *   image: /local/yarbo.png     # optional, replaces the card's picture of the robot
  *   live_max_minutes: 5         # optional, stops the live camera automatically
  *
  * Entities are found through the integration's yarbo/devices command, by their
@@ -95,6 +95,10 @@ function headKind(headType) {
     case "Smart Cover":
       return "cover";
     default:
+      // Yarbo's SDK doesn't list the Yarbo M's rear trimmer and collector yet, so
+      // these names are a guess.
+      if (/trim/i.test(headType || "")) return "trim";
+      if (/collect/i.test(headType || "")) return "collect";
       return "none";
   }
 }
@@ -107,81 +111,46 @@ function signalBars(rssi) {
   return 1;
 }
 
-// ---- Drawing of the robot ---------------------------------------------------
+// ---- Picture of the robot ----------------------------------------------------------
 
-const HEADS = {
-  mower: `
-    <path class="rb-arm" d="M244 118 L262 134"/>
-    <path class="rb-body" d="M252 132 H318 Q338 132 344 148 L348 160 Q350 172 338 172 H252 Z"/>
-    <path class="rb-lid" d="M252 132 H318 Q338 132 344 148 H252 Z"/>
-    <rect class="rb-yellow" x="268" y="154" width="50" height="6" rx="3"/>
-    <circle class="rb-tire" cx="336" cy="170" r="6"/>`,
-  snow: `
-    <path class="rb-chute" d="M300 104 C300 82 302 66 314 56 L330 50"/>
-    <path class="rb-yellow" d="M326 42 L342 48 L333 57 Z"/>
-    <rect class="rb-body" x="258" y="104" width="66" height="66" rx="12"/>
-    <rect class="rb-yellow" x="268" y="114" width="46" height="46" rx="10"/>
-    <circle class="rb-body" cx="291" cy="137" r="13"/>
-    <path class="rb-spiral" d="M291 126 a11 11 0 0 1 0 22 a7 7 0 0 1 0 -14"/>
-    <rect class="rb-steel" x="254" y="167" width="76" height="5" rx="2.5"/>`,
-  blower: `
-    <rect class="rb-body" x="258" y="100" width="50" height="56" rx="12"/>
-    <circle class="rb-yellow" cx="283" cy="126" r="17"/>
-    <circle class="rb-body" cx="283" cy="126" r="9"/>
-    <path class="rb-spoke" d="M283 117 V135 M274 126 H292"/>
-    <path class="rb-lid" d="M296 148 L344 164 Q351 167 348 174 L300 172 Q291 170 292 160 Z"/>`,
-  cover: `
-    <path class="rb-lid" d="M96 62 V44 Q96 36 104 36 H210 Q218 36 218 44 V62 Z"/>
-    <rect class="rb-yellow" x="112" y="44" width="62" height="5" rx="2.5"/>
-    <rect class="rb-lid" x="254" y="96" width="10" height="30" rx="4"/>`,
-  none: `<rect class="rb-lid" x="254" y="96" width="10" height="30" rx="4"/>`,
+// The card's own renders of each series and module, served next to this file. They
+// carry the card's ?v= fingerprint, so an update refreshes them in the browser cache too.
+const PICTURE_DIR = new URL("images/", import.meta.url);
+const PICTURE_VERSION = new URL(import.meta.url).search;
+// Widths at 600 px high, so the card keeps its layout while a picture loads.
+const PICTURES = {
+  "y-core": 856, "y-snow": 808, "y-mower": 1008, "y-blower": 946,
+  "m-core": 823, "m-snow": 867, "m-mower": 918, "m-trim": 882, "m-collect": 961,
 };
+// These also come with the module's lights on, in the same framing.
+const LIT_PICTURES = new Set(["y-snow", "y-mower"]);
+// Kept referenced, so the browser keeps them decoded and a new <img> shows them at once.
+const preloaded = new Map();
 
-function robotSvg(kind, { moving, light }) {
-  return `
-    <svg viewBox="20 20 340 162" role="img" aria-label="Yarbo robot">
-      <defs>
-        <radialGradient id="yc-glow" cx="50%" cy="50%" r="50%">
-          <stop offset="0" style="stop-color: var(--yc-tone, transparent); stop-opacity: 0.55"/>
-          <stop offset="1" style="stop-color: var(--yc-tone, transparent); stop-opacity: 0"/>
-        </radialGradient>
-        <linearGradient id="yc-beam" x1="0" x2="1" y1="0" y2="0">
-          <stop offset="0" stop-color="#fff8d6" stop-opacity="0.75"/>
-          <stop offset="1" stop-color="#fff8d6" stop-opacity="0"/>
-        </linearGradient>
-      </defs>
-      <ellipse cx="190" cy="172" rx="170" ry="24" fill="url(#yc-glow)"/>
-      <ellipse class="rb-shadow" cx="190" cy="175" rx="150" ry="6"/>
-      ${light ? `<polygon class="rb-beam" points="256,105 360,74 360,144" fill="url(#yc-beam)"/>` : ""}
-      <line class="rb-antenna" x1="86" y1="66" x2="86" y2="30"/>
-      <line class="rb-antenna" x1="104" y1="64" x2="104" y2="42"/>
-      <circle class="rb-tip" cx="86" cy="30" r="3"/>
-      <circle class="rb-tip" cx="104" cy="42" r="3"/>
-      <rect class="rb-track" x="40" y="120" width="220" height="52" rx="26"/>
-      <rect class="rb-tread${moving ? " moving" : ""}" x="43" y="123" width="214" height="46" rx="23"/>
-      <circle class="rb-wheel" cx="66" cy="146" r="18"/>
-      <circle class="rb-wheel" cx="234" cy="146" r="18"/>
-      <circle class="rb-hub" cx="66" cy="146" r="6"/>
-      <circle class="rb-hub" cx="234" cy="146" r="6"/>
-      <circle class="rb-roller" cx="110" cy="158" r="6"/>
-      <circle class="rb-roller" cx="150" cy="158" r="6"/>
-      <circle class="rb-roller" cx="190" cy="158" r="6"/>
-      <rect class="rb-cover" x="96" y="133" width="108" height="20" rx="10"/>
-      <line class="rb-stripe" x1="110" y1="143" x2="190" y2="143"/>
-      <rect class="rb-body" x="54" y="84" width="200" height="42" rx="12"/>
-      <rect class="rb-yellow" x="168" y="90" width="82" height="32" rx="9"/>
-      <rect class="rb-vent" x="182" y="98" width="4" height="16" rx="2"/>
-      <rect class="rb-vent" x="192" y="98" width="4" height="16" rx="2"/>
-      <rect class="rb-vent" x="202" y="98" width="4" height="16" rx="2"/>
-      <rect class="rb-yellow" x="62" y="94" width="26" height="8" rx="4"/>
-      <path class="rb-lid" d="M70 86 Q76 64 100 62 H214 Q240 62 248 86 Z"/>
-      <path class="rb-shine" d="M94 70 Q102 66 112 66 H208"/>
-      <rect class="rb-estop" x="140" y="55" width="24" height="9" rx="3"/>
-      <rect class="rb-camera" x="236" y="70" width="12" height="11" rx="4"/>
-      <circle class="rb-lens" cx="242" cy="75.5" r="2.6"/>
-      <rect class="rb-led${light ? " on" : ""}" x="246" y="102" width="8" height="6" rx="2"/>
-      ${HEADS[kind] || HEADS.none}
-    </svg>`;
+function pictureUrl(file) {
+  return new URL(`${file}.webp${PICTURE_VERSION}`, PICTURE_DIR).href;
+}
+
+function preload(url) {
+  if (preloaded.has(url)) return;
+  const img = new Image();
+  img.src = url;
+  preloaded.set(url, img);
+}
+
+// Yarbo's SDK only knows the Y Series so far; a model named like "Yarbo M" gets the M pictures.
+function robotSeries(model) {
+  return /\bM\d*\b/.test(model || "") ? "m" : "y";
+}
+
+function robotPicture(series, kind, light) {
+  // A module without its own picture, such as the Smart Cover, shows the bare core.
+  const name = `${series}-${kind}` in PICTURES ? `${series}-${kind}` : `${series}-core`;
+  const lit = LIT_PICTURES.has(name);
+  // Load the other lights version too, so switching the lights doesn't flash an empty frame.
+  if (lit) preload(pictureUrl(light ? name : `${name}-lights`));
+  const file = lit && light ? `${name}-lights` : name;
+  return `<img src="${pictureUrl(file)}" width="${PICTURES[name]}" height="600" alt="">`;
 }
 
 // ---- Work-zone map ------------------------------------------------------------
@@ -388,9 +357,16 @@ const STYLE = `
     display: grid; grid-template-columns: minmax(0, 1fr) 64px; align-items: center; gap: 12px;
   }
   .stage { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
-  .robot { width: 100%; max-width: 380px; transition: filter 0.4s, opacity 0.4s; }
-  .robot svg, .robot img {
-    display: block; width: 100%; height: auto; max-height: 200px; object-fit: contain;
+  .robot { position: relative; width: 100%; max-width: 380px; transition: filter 0.4s, opacity 0.4s; }
+  /* A glow in the status color under the robot, breathing while it drives. */
+  .robot::before {
+    content: ""; position: absolute; left: 0; right: 0; bottom: -3%; height: 30%;
+    background: radial-gradient(closest-side, color-mix(in srgb, var(--yc-tone, transparent) 55%, transparent), transparent);
+    pointer-events: none;
+  }
+  .robot.moving::before { animation: yc-glow 2.4s ease-in-out infinite; }
+  .robot img {
+    position: relative; display: block; width: 100%; height: auto; max-height: 200px; object-fit: contain;
   }
   .robot.offline { filter: grayscale(1); opacity: 0.45; }
   .state { text-align: center; }
@@ -580,36 +556,7 @@ const STYLE = `
   }
   .toast.show { opacity: 1; transform: none; }
 
-  /* Robot drawing */
-  .rb-shadow { fill: #000; opacity: 0.4; }
-  .rb-track { fill: #141518; stroke: #2a2b30; stroke-width: 1; }
-  .rb-tread { fill: none; stroke: #2e2f35; stroke-width: 5; stroke-dasharray: 6 5; }
-  .rb-tread.moving { animation: yc-tread 0.5s linear infinite; }
-  .rb-wheel { fill: #222327; stroke: #3a3b41; stroke-width: 2; }
-  .rb-hub, .rb-yellow { fill: #fcc419; }
-  .rb-roller { fill: #2a2b30; }
-  .rb-cover { fill: #1b1c20; }
-  .rb-stripe { stroke: #fcc419; stroke-width: 2.5; stroke-linecap: round; }
-  .rb-body { fill: #202127; }
-  .rb-lid { fill: #2d2e34; }
-  .rb-shine { fill: none; stroke: rgba(255, 255, 255, 0.14); stroke-width: 2; stroke-linecap: round; }
-  .rb-vent { fill: rgba(0, 0, 0, 0.22); }
-  .rb-estop { fill: #e5484d; }
-  .rb-antenna { stroke: #3b3c43; stroke-width: 3; stroke-linecap: round; }
-  .rb-tip { fill: #3b3c43; }
-  .rb-camera { fill: #17181c; stroke: #3b3c43; stroke-width: 1; }
-  .rb-lens { fill: #5b8cff; opacity: 0.85; }
-  .rb-led { fill: #cfd6e4; }
-  .rb-led.on { fill: #fffbe6; filter: drop-shadow(0 0 4px #fff3b0); }
-  .rb-beam { opacity: 0.55; }
-  .rb-arm { stroke: #3b3c43; stroke-width: 6; stroke-linecap: round; }
-  .rb-tire { fill: #17181c; }
-  .rb-chute { fill: none; stroke: #2d2e34; stroke-width: 12; stroke-linecap: round; }
-  .rb-spiral { fill: none; stroke: #fcc419; stroke-width: 2; }
-  .rb-steel { fill: #3b3c43; }
-  .rb-spoke { stroke: #fcc419; stroke-width: 2; stroke-linecap: round; }
-
-  @keyframes yc-tread { to { stroke-dashoffset: -11; } }
+  @keyframes yc-glow { 50% { opacity: 0.4; } }
   @keyframes yc-ping { from { transform: scale(0.6); opacity: 0.45; } to { transform: scale(2); opacity: 0; } }
   @keyframes yc-breathe { 50% { filter: brightness(1.18); } }
   @keyframes yc-busy { 50% { opacity: 0.55; } }
@@ -983,9 +930,10 @@ class YarboCard extends HTMLElement {
   }
 
   _homeHtml(m) {
+    const moving = m.mode === "working" || m.mode === "returning";
     const image = this._config.image
       ? `<img src="${esc(this._config.image)}" alt="">`
-      : robotSvg(m.head, { moving: m.mode === "working" || m.mode === "returning", light: m.light });
+      : robotPicture(robotSeries(this._device.model), m.head, m.light);
 
     const netIcon =
       m.network === "4G"
@@ -1038,7 +986,7 @@ class YarboCard extends HTMLElement {
     return `
       <div class="hero">
         <div class="stage">
-          <div class="robot${m.mode === "offline" ? " offline" : ""}">${image}</div>
+          <div class="robot${m.mode === "offline" ? " offline" : ""}${moving ? " moving" : ""}">${image}</div>
           <div class="state">
             <div class="label">${esc(m.label)}</div>
             <div class="detail">${esc(m.detail)}</div>

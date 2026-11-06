@@ -14,8 +14,10 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.yarbo.cards import (
     CARD_FILES,
+    PICTURES_DIR,
     STATIC_URL,
     WWW_DIR,
+    _fingerprints,
     async_register_cards,
 )
 from custom_components.yarbo.const import DOMAIN
@@ -27,6 +29,40 @@ SN = "SN123"
 def test_card_files_exist() -> None:
     for name in CARD_FILES:
         assert (WWW_DIR / name).is_file()
+
+
+def test_card_pictures_match_the_card() -> None:
+    """Every picture the Yarbo card names exists, at the width the card reserves for it."""
+    image = pytest.importorskip("PIL.Image")
+    source = (WWW_DIR / "yarbo-card.js").read_text()
+    table = re.search(r"const PICTURES = \{(.*?)\};", source, re.S).group(1)
+    widths = {name: int(width) for name, width in re.findall(r'"([a-z]-[a-z]+)": (\d+)', table)}
+    lit = re.search(r"const LIT_PICTURES = new Set\(\[(.*?)\]\)", source).group(1)
+    lit_names = re.findall(r'"([^"]+)"', lit)
+    assert widths and lit_names and set(lit_names) <= set(widths)
+
+    files = dict(widths) | {f"{name}-lights": widths[name] for name in lit_names}
+    for name, width in files.items():
+        with image.open(PICTURES_DIR / f"{name}.webp") as picture:
+            assert picture.size == (width, 600), name
+    assert {path.stem for path in PICTURES_DIR.glob("*.webp")} == set(files)
+
+
+def test_pictures_change_the_card_fingerprint(tmp_path) -> None:
+    www = tmp_path / "www"
+    (www / "images").mkdir(parents=True)
+    for name in CARD_FILES:
+        (www / name).write_text("card")
+    (www / "images" / "y-core.webp").write_bytes(b"one")
+    with (
+        patch("custom_components.yarbo.cards.WWW_DIR", www),
+        patch("custom_components.yarbo.cards.PICTURES_DIR", www / "images"),
+    ):
+        before = _fingerprints()
+        (www / "images" / "y-core.webp").write_bytes(b"two")
+        after = _fingerprints()
+    assert before["yarbo-card.js"] != after["yarbo-card.js"]
+    assert before["yarbo-smart-vision-card.js"] == after["yarbo-smart-vision-card.js"]
 
 
 async def test_cards_are_registered_once(hass) -> None:
